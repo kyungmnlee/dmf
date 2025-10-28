@@ -31,27 +31,16 @@ def modulate(x: Tensor, shift: Tensor, scale: Tensor) -> Tensor:
 
 """RMS Layer Normalization"""
 class RMSNorm(nn.Module):
-    def __init__(self, dim: int, eps: float = 1e-6, expr: str = "scale"):
+    def __init__(self, dim: int, eps: float = 1e-6):
         super().__init__()
         self.eps = eps
-        if expr == "weight":
-            self.weight = nn.Parameter(torch.ones(dim))
-        elif expr == "scale":
-            self.scale = nn.Parameter(torch.ones(dim))
-        else:
-            raise ValueError(f"Unsupported expr: {expr}")
-        # self.weight = nn.Parameter(torch.ones(dim))
-        # self.register_parameter('weight', self.scale)  # for compatibility with RAE-DDT model
+        self.scale = nn.Parameter(torch.ones(dim))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Use in-place safe variant for less memory overhead
         norm_x = torch.rsqrt(x.pow(2).mean(-1, keepdim=True, dtype=torch.float32) + self.eps)
-        if hasattr(self, "weight"):
-            return x * norm_x.to(dtype=x.dtype) * self.weight.to(dtype=x.dtype)
-        elif hasattr(self, "scale"):
-            return x * norm_x.to(dtype=x.dtype) * self.scale.to(dtype=x.dtype)
-        else:
-            raise ValueError("RMSNorm is not properly initialized.")
+        return x * norm_x.to(dtype=x.dtype) * self.scale.to(dtype=x.dtype)
+
 
 """Sinusoidal Timestep Embedding Function"""
 def timestep_embedding(t: Tensor, dim: int, max_period: int = 10000) -> Tensor:
